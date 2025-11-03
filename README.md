@@ -107,6 +107,48 @@ The app will open in your browser at `http://localhost:8501`
 
 7. **Check history** by toggling "Show Evaluation History" to view all past evaluations with summary statistics
 
+## SEAL Prompt Evaluation: Single vs Batch Modes
+
+This project evaluates the two prompts from the SEAL repository across two modes:
+
+- Single run: Qualitative scoring (LLM-as-a-Judge)
+- Batch run (5 input-output pairs): Per-item qualitative scoring + batch-level metrics
+
+### Single Run (Prompt A)
+
+- Relevance (1–10): How relevant is the response to the given input and context?
+- Clarity (1–10): How clear and understandable is the generated output?
+
+### Batch Run (5 datasets)
+
+- For each of the 5 input/output pairs: Relevance (1–10), Clarity (1–10)
+- For the entire batch: Consistency (1–10), Creativity (1–10)
+
+Use the following template to evaluate batch-level metrics (Consistency and Creativity):
+
+```jsx
+Following are the inputs and answer combinations for prompt 1
+
+{input1} : {answer1}
+{input2} : {answer2}
+{input3} : {answer3}
+{input4} : {answer4}
+{input5} : {answer5}
+
+Please evaluate and score these results for consistency and creativity
+
+Consistency means..., how to score
+Creativity means ..., how to score
+```
+
+### Completeness (Binary) – Structured Output + Pydantic
+
+- Completeness: Does the output address all aspects of the prompt? All fields are present and within expected ranges.
+- Primary enforcement: Gemini Structured Output (schema-constrained JSON)
+- Fallback enforcement: Pydantic validation
+
+If structured output is enabled and returns valid JSON for the target schema, the Pydantic completeness check may be skipped.
+
 ### Batch Evaluation
 
 1. **Prepare CSV file** with the following columns:

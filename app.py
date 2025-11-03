@@ -14,11 +14,17 @@ from judge import (
     configure_gemini,
     evaluate_with_gemini,
     generate_with_llm,
-    EVALUATION_PROMPT
+    EVALUATION_PROMPT,
+    EVALUATION_PROMPT_INDIVIDUAL,
+    EVALUATION_PROMPT_BATCH_GUIDE,
+    evaluate_batch_with_gemini,
+    flatten_json_schema
 )
-from logger import log_evaluation, get_evaluation_history
+from logger import log_evaluation, get_evaluation_history, log_batch_summary
 from intervention import InterventionPrompt
 from curriculum import CurriculumPrompt
+from schemas.base import InterventionPlan
+from schemas.curriculum import CurriculumResponse
 
 
 # Load environment variables
@@ -35,8 +41,11 @@ st.set_page_config(
 st.title("🧾 LLM Evaluation Playground")
 st.markdown("Evaluate model-generated outputs using LLM-as-a-Judge and Pydantic validation")
 
-with st.expander("View the Main Evaluation Prompt"):
-    st.code(EVALUATION_PROMPT, language='markdown')
+with st.expander("View the Main Evaluation Prompt (Individual Mode)"):
+    st.code(EVALUATION_PROMPT_INDIVIDUAL, language='markdown')
+
+with st.expander("View the Batch Evaluation Prompt (Consistency & Creativity)"):
+    st.code(EVALUATION_PROMPT_BATCH_GUIDE, language='markdown')
 
 # Sidebar for configuration
 with st.sidebar:
@@ -116,6 +125,12 @@ with st.sidebar:
         value=0.5,
         step=0.1,
         help="Controls the randomness of the generator's output. Higher is more creative."
+    )
+
+    use_structured_output = st.checkbox(
+        "Use Structured Output (Gemini)",
+        value=False,
+        help="If enabled, generator output will be constrained to the target schema and treated as complete."
     )
     
     # Show history toggle
@@ -211,15 +226,38 @@ with individual_tab:
 
                 # Step 2: Generate answer with LLM
                 with st.spinner("Generating answer..."):
+                    response_schema = None
+                    if use_structured_output and generator_provider == 'gemini':
+                        if prompt_type == 'emt':
+                            response_schema = flatten_json_schema(InterventionPlan.model_json_schema())
+                        elif prompt_type == 'curriculum':
+                            response_schema = flatten_json_schema(CurriculumResponse.model_json_schema())
                     answer = generate_with_llm(
                         prompt,
                         generator_provider,
                         generator_model,
-                        generator_temperature
+                        generator_temperature,
+                        response_schema=response_schema
                     )
                 
                 with answer_placeholder.container():
                     st.markdown(answer)
+                    # Completeness validation displayed with the generated answer
+                    if use_structured_output and generator_provider == 'gemini':
+                        if isinstance(answer, str) and answer.startswith("Error"):
+                            validation_status = "Invalid ❌ (Structured Output generation error)"
+                            st.error("Completeness: " + validation_status)
+                        else:
+                            validation_status = "Valid ✅ (Structured Output)"
+                            st.success("Completeness: " + validation_status)
+                    else:
+                        try:
+                            ModelAnswer(content=answer)
+                            validation_status = "Valid ✅"
+                            st.success("Completeness: " + validation_status)
+                        except ValidationError as e:
+                            validation_status = f"Invalid ❌\n{str(e)}"
+                            st.error("Completeness: " + validation_status)
 
                 # Step 3: Evaluate the generated answer
                 with st.spinner("Evaluating answer..."):
@@ -230,7 +268,8 @@ with individual_tab:
                         question_for_judge,
                         answer,
                         model_name,
-                        temperature
+                        temperature,
+                        mode="individual"
                     )
 
                 # Step 4: Display results and log
@@ -238,21 +277,9 @@ with individual_tab:
                     st.subheader("🤖 LLM Judge Feedback")
                     st.markdown(feedback)
                     st.divider()
-                    cols = st.columns(5)
-                    cols[0].metric("Total Rating", f"{scores['total']}/10" if scores['total'] else "N/A")
-                    cols[1].metric("Relevance", f"{scores['relevance']}/10" if scores['relevance'] else "N/A")
-                    cols[2].metric("Clarity", f"{scores['clarity']}/10" if scores['clarity'] else "N/A")
-                    cols[3].metric("Consistency", f"{scores['consistency']}/10" if scores['consistency'] else "N/A")
-                    cols[4].metric("Creativity", f"{scores['creativity']}/10" if scores['creativity'] else "N/A")
-                    
-                    # Pydantic validation
-                    try:
-                        ModelAnswer(content=answer)
-                        validation_status = "Valid ✅"
-                        st.success("Pydantic Validation: " + validation_status)
-                    except ValidationError as e:
-                        validation_status = f"Invalid ❌\n{str(e)}"
-                        st.error("Pydantic Validation: " + validation_status)
+                    cols = st.columns(2)
+                    cols[0].metric("Relevance", f"{scores['relevance']}/10" if scores['relevance'] else "N/A")
+                    cols[1].metric("Clarity", f"{scores['clarity']}/10" if scores['clarity'] else "N/A")
 
                     with st.expander("Show Judge Prompt"):
                         st.code(judge_prompt, language='markdown')
@@ -270,7 +297,9 @@ with individual_tab:
                     relevance_score=scores["relevance"],
                     clarity_score=scores["clarity"],
                     consistency_score=scores["consistency"],
-                    creativity_score=scores["creativity"]
+                    creativity_score=scores["creativity"],
+                    batch_id=None,
+                    row_type="item"
                 )
                 st.success("✅ Results saved to evaluations.csv")
 
@@ -303,6 +332,8 @@ with batch_tab:
                     progress_bar = st.progress(0)
                     total_rows = len(input_df)
                     
+                    batch_id = str(int(time.time()))
+                    batch_pairs = []
                     for index, row in input_df.iterrows():
                         with st.spinner(f"Processing row {index + 1}/{total_rows}..."):
                             try:
@@ -328,45 +359,73 @@ with batch_tab:
                                     prompt = CurriculumPrompt.get_prompt(generator_provider, input_data)
                                 
                                 # Step 2: Generate answer
+                                response_schema = None
+                                if use_structured_output and generator_provider == 'gemini':
+                                    if prompt_type == 'emt':
+                                        response_schema = flatten_json_schema(InterventionPlan.model_json_schema())
+                                    elif prompt_type == 'curriculum':
+                                        response_schema = flatten_json_schema(CurriculumResponse.model_json_schema())
                                 answer = generate_with_llm(
                                     prompt,
                                     generator_provider,
                                     generator_model,
-                                    generator_temperature
+                                    generator_temperature,
+                                    response_schema=response_schema
                                 )
                                 time.sleep(1) # To avoid hitting API rate limits
 
-                                # Step 3: Evaluate answer
+                                # Step 3: Per-item judging (Relevance & Clarity only)
                                 question_for_judge = f"Prompt Type: {prompt_type}\nInput Data:\n{row['input']}"
                                 feedback, scores, judge_prompt = evaluate_with_gemini(
                                     question_for_judge,
                                     answer,
                                     model_name,
-                                    temperature
+                                    temperature,
+                                    mode="individual"
                                 )
+
+                                # Step 4: Completeness validation
+                                if use_structured_output and generator_provider == 'gemini':
+                                    validation_status = "Valid (Structured Output)"
+                                else:
+                                    try:
+                                        ModelAnswer(content=answer)
+                                        validation_status = "Valid"
+                                    except ValidationError as e:
+                                        validation_status = f"Invalid: {e}"
                                 
-                                # Step 4: Pydantic Validation
-                                try:
-                                    ModelAnswer(content=answer)
-                                    validation_status = "Valid"
-                                except ValidationError as e:
-                                    validation_status = f"Invalid: {e}"
-                                
-                                results.append({
+                                result_row = {
                                     "type": prompt_type,
                                     "input": row["input"],
                                     "generated_answer": answer,
                                     "judge_feedback": feedback,
-                                    "total_score": scores["total"],
-                                    "relevance_score": scores["relevance"],
-                                    "clarity_score": scores["clarity"],
-                                    "consistency_score": scores["consistency"],
-                                    "creativity_score": scores["creativity"],
+                                    "total_score": scores.get("total"),
+                                    "relevance_score": scores.get("relevance"),
+                                    "clarity_score": scores.get("clarity"),
                                     "validation_status": validation_status,
                                     "generator_model": generator_model,
                                     "judge_model": model_name,
-                                })
+                                }
+                                results.append(result_row)
+                                # Log per-item row with batch_id
+                                log_evaluation(
+                                    model=generator_model,
+                                    temperature=generator_temperature,
+                                    question=question_for_judge,
+                                    answer=answer,
+                                    judge_feedback=feedback,
+                                    judge_prompt=judge_prompt,
+                                    total_rating=scores.get("total"),
+                                    validation_status=validation_status,
+                                    relevance_score=scores.get("relevance"),
+                                    clarity_score=scores.get("clarity"),
+                                    consistency_score=None,
+                                    creativity_score=None,
+                                    batch_id=batch_id,
+                                    row_type="item"
+                                )
                             
+                                batch_pairs.append((row["input"], answer))
                             except Exception as row_error:
                                 results.append({
                                     "type": row.get("type", "unknown"),
@@ -386,6 +445,29 @@ with batch_tab:
                         progress_bar.progress((index + 1) / total_rows)
 
                     results_df = pd.DataFrame(results)
+                    # Batch-level evaluation: Consistency & Creativity
+                    try:
+                        batch_feedback, batch_scores, batch_prompt = evaluate_batch_with_gemini(
+                            batch_pairs,
+                            model_name,
+                            temperature
+                        )
+                        st.subheader("🧪 Batch Metrics")
+                        cols = st.columns(2)
+                        cols[0].metric("Consistency (1-10)", batch_scores.get("consistency", "N/A"))
+                        cols[1].metric("Creativity (1-10)", batch_scores.get("creativity", "N/A"))
+                        # Log batch summary row
+                        log_batch_summary(
+                            model=generator_model,
+                            temperature=generator_temperature,
+                            judge_feedback=batch_feedback,
+                            judge_prompt=batch_prompt,
+                            consistency_score=batch_scores.get("consistency"),
+                            creativity_score=batch_scores.get("creativity"),
+                            batch_id=batch_id
+                        )
+                    except Exception as e:
+                        st.warning(f"Batch-level evaluation failed: {e}")
                     st.success("✅ Batch evaluation complete!")
                     st.dataframe(results_df)
                     
