@@ -1,5 +1,7 @@
 # Environment
 .env*
+.env.local
+.env.*.local
 .venv/
 venv/
 env/
@@ -11,6 +13,13 @@ __pycache__/
 *$py.class
 *.so
 .Python
+*.egg-info/
+dist/
+build/
+*.egg
+*.whl
+pip-log.txt
+pip-delete-this-directory.txt
 
 # CSV outputs
 evaluations.csv
@@ -25,6 +34,7 @@ htmlcov/
 .tox/
 *.cover
 .hypothesis/
+test-results/
 
 # Streamlit
 .streamlit/
@@ -34,13 +44,32 @@ htmlcov/
 .idea/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
+.cursor/
+.cursor-rules
+*.code-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
 
 # Type checking
 .mypy_cache/
 .dmypy.json
 dmypy.json
+.pytype/
+
+# Logs
+*.log
+logs/
 

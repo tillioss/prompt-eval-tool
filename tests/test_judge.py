@@ -1,7 +1,7 @@
 """
 Unit tests for judge.py with mocked Gemini API
 """
-import pytest
+
 from unittest.mock import patch, MagicMock
 
 from judge import (
@@ -19,11 +19,7 @@ from judge import (
 
 class TestScoreExtraction:
     def test_extract_rating(self):
-        text = (
-            "Relevance Score: 8\n"
-            "Clarity Score: 7\n"
-            "Total Score: 9\n"
-        )
+        text = "Relevance Score: 8\n" "Clarity Score: 7\n" "Total Score: 9\n"
         assert extract_rating(text) == 9
 
     def test_extract_relevance_score(self):

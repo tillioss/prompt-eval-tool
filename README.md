@@ -2,6 +2,8 @@
 
 A Streamlit web app for generating educational intervention and curriculum prompts, evaluating model-generated outputs using LLM-as-a-Judge evaluation, and validating responses with Pydantic.
 
+**🌐 Live Demo:** [https://llm-judge-tilli.streamlit.app/](https://llm-judge-tilli.streamlit.app/)
+
 ## 🎯 Features
 
 - **Intervention Prompt Generation** – Generate targeted intervention plans based on EMT (Emotion Matching Task) scores
@@ -100,11 +102,10 @@ The app will open in your browser at `http://localhost:8501`
    - Generated prompt (Step 2)
    - Generated answer (Step 3)
    - **Evaluation metrics**:
-     - Total Rating (1-10)
+     - Total Rating (1-10) - Average of Relevance and Clarity
      - Relevance Score (1-10)
      - Clarity Score (1-10)
-     - Consistency Score (1-10)
-     - Creativity Score (1-10)
+     - Note: Consistency and Creativity scores are only available for batch evaluations
    - Pydantic validation status
    - Detailed LLM judge feedback
    - Expandable section to view the exact judge prompt used
@@ -253,13 +254,15 @@ llm-judge/
 ├── judge.py                # LLM-as-a-Judge evaluation logic
 ├── models.py               # Pydantic models for validation
 ├── logger.py               # CSV logging functionality
-├── intervention.py         # Intervention prompt generation
-├── curriculum.py           # Curriculum prompt generation
+├── prompts/                # Prompt generation modules
+│   ├── intervention.py    # Intervention prompt generation
+│   └── curriculum.py      # Curriculum prompt generation
 ├── schemas/                # Pydantic schema definitions
 │   ├── base.py            # Intervention plan schema
 │   └── curriculum.py      # Curriculum response schema
+├── tests/                  # Test suite
 ├── requirements.txt        # Python dependencies
-├── evaluations.csv         # Evaluation log (generated)
+├── evaluations.csv        # Evaluation log (generated)
 ├── sample-input-dataset.csv # Example CSV for batch evaluation
 ├── .env.example           # Example environment file
 ├── .gitignore             # Git ignore rules
@@ -267,11 +270,56 @@ llm-judge/
 └── PRD.md                 # Product requirements document
 ```
 
+## 🧪 Code Coverage
+
+The project maintains **51% overall code coverage** with comprehensive test coverage for core business logic:
+
+### Coverage Breakdown
+
+| Module | Coverage | Status |
+|--------|----------|--------|
+| **Total** | **51%** | ✅ |
+| `models.py` | 100% | ✅ Excellent |
+| `prompts/curriculum.py` | 100% | ✅ Excellent |
+| `prompts/intervention.py` | 100% | ✅ Excellent |
+| `schemas/curriculum.py` | 100% | ✅ Excellent |
+| `prompts/__init__.py` | 100% | ✅ Excellent |
+| `logger.py` | 96% | ✅ Excellent |
+| `schemas/base.py` | 85% | ✅ Good |
+| `judge.py` | 71% | ✅ Good |
+| `app.py` | 0% | ⚠️ UI Code (Streamlit) |
+
+### Running Tests
+
+```bash
+# Install development dependencies
+pip install -r requirements-dev.txt
+
+# Run all tests with coverage
+pytest
+
+# View detailed coverage report
+pytest --cov=. --cov-report=term-missing
+
+# Generate HTML coverage report
+pytest --cov=. --cov-report=html
+# Then open htmlcov/index.html in your browser
+```
+
+### Test Coverage Notes
+
+- **Core business logic** (prompts, models, logger, judge) is well-tested with 71-100% coverage
+- **UI code** (`app.py`) is not tested, which is standard for Streamlit applications
+- The test suite focuses on testable business logic rather than UI interactions
+
 ## 🛠️ Customization
 
 ### Modify the Judge Prompt
 
-Edit the `EVALUATION_PROMPT` in `judge.py` to customize evaluation criteria and scoring dimensions.
+Edit the evaluation prompts in `judge.py` to customize evaluation criteria and scoring dimensions:
+- `EVALUATION_PROMPT_INDIVIDUAL` - Used for individual evaluations (Relevance & Clarity)
+- `EVALUATION_PROMPT_BATCH_GUIDE` - Used for batch-level evaluations (Consistency & Creativity)
+- `EVALUATION_PROMPT` - Available but not currently used in the application flow
 
 ### Change Validation Schema
 
@@ -279,14 +327,14 @@ Update the `ModelAnswer` class in `models.py` to match your expected answer stru
 
 ### Customize Intervention Prompts
 
-Modify `InterventionPrompt` class in `intervention.py` to:
+Modify `InterventionPrompt` class in `prompts/intervention.py` to:
 - Update EMT strategies
 - Change the base prompt template
 - Adjust safety guidelines
 
 ### Customize Curriculum Prompts
 
-Modify `CurriculumPrompt` class in `curriculum.py` to:
+Modify `CurriculumPrompt` class in `prompts/curriculum.py` to:
 - Update available interventions
 - Change curriculum data
 - Adjust prompt templates
@@ -297,7 +345,7 @@ Add more Gemini models to the `model_options` dictionary in `app.py` (sidebar se
 
 ### Modify Evaluation Metrics
 
-Update the `EVALUATION_PROMPT` in `judge.py` and the score extraction functions to add or modify evaluation dimensions.
+Update the evaluation prompts in `judge.py` (`EVALUATION_PROMPT_INDIVIDUAL` or `EVALUATION_PROMPT_BATCH_GUIDE`) and the score extraction functions to add or modify evaluation dimensions.
 
 ## 📝 License
 

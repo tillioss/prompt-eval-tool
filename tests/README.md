@@ -9,7 +9,8 @@ tests/
 ├── __init__.py
 ├── test_models.py          # Unit tests for Pydantic models
 ├── test_logger.py          # Unit tests for logging functionality
-├── test_bug_fix_example.py # Examples of bug fix testing patterns
+├── test_judge.py           # Unit tests for judge.py (evaluation logic)
+├── test_prompts.py         # Unit tests for prompts (curriculum and intervention)
 └── README.md               # This file
 ```
 
