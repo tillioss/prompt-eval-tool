@@ -133,6 +133,9 @@ with st.sidebar:
         help="If enabled, generator output will be constrained to the target schema and treated as complete."
     )
     
+    if use_structured_output:
+        st.warning("⚠️ **Note:** Structured Output does not work well with this application. Please keep this checkbox **unticked** and stick to Pydantic validation instead.")
+    
     # Show history toggle
     show_history = st.checkbox("Show Evaluation History", value=False)
 
