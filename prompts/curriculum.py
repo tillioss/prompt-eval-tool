@@ -4,9 +4,10 @@ from typing import Dict, Any
 import json
 from schemas.curriculum import CurriculumResponse
 
+
 class CurriculumPrompt:
     """Manages prompt templates for curriculum-based intervention generation."""
-    
+
     BASE_TEMPLATE = """You are an expert Educational Intervention Specialist focusing on emotional intelligence development in children.
 
 TASK: Create a personalized intervention plan based on grade level and current performance.
@@ -45,11 +46,14 @@ Guidelines:
 
 Ensure your response is properly formatted and includes all required fields according to the schema. All content must be suitable for teachers to use with children in educational settings."""
 
-    GEMINI_TEMPLATE = BASE_TEMPLATE + """
+    GEMINI_TEMPLATE = (
+        BASE_TEMPLATE
+        + """
 Note: Return only a valid JSON object matching the schema exactly."""
+    )
 
     # The curriculum data is stored as a class variable
-    CURRICULUM_DATA = '''
+    CURRICULUM_DATA = """
     10 Interventions for Emotional Awareness, Regulation, and Anger Management
 
     Emotional Awareness:
@@ -104,29 +108,29 @@ Note: Return only a valid JSON object matching the schema exactly."""
         - Summary: Create time blocking charts
         - Implementation: Practice time management through scenarios
         - Purpose: Reduce anger through better time management
-    '''
+    """
 
     @classmethod
     def get_prompt(cls, provider: str, data: Dict[str, Any]) -> str:
         """Get formatted prompt for specified provider.
-        
+
         Args:
             provider: LLM provider name ('gemini', 'openai', etc.)
             data: Dictionary containing template variables
-            
+
         Returns:
             Formatted prompt string
         """
         # Add schema and curriculum data to template variables
-        data['schema'] = json.dumps(CurriculumResponse.model_json_schema(), indent=2)
-        data['interventions'] = cls.CURRICULUM_DATA
-        
+        data["schema"] = json.dumps(CurriculumResponse.model_json_schema(), indent=2)
+        data["interventions"] = cls.CURRICULUM_DATA
+
         # Format skill areas for prompt
-        data['skill_areas'] = ', '.join(data['skill_areas'])
-        
+        data["skill_areas"] = ", ".join(data["skill_areas"])
+
         # Select template based on provider
         template = {
-            'gemini': cls.GEMINI_TEMPLATE,
+            "gemini": cls.GEMINI_TEMPLATE,
         }.get(provider, cls.BASE_TEMPLATE)
-        
+
         return template.format(**data)
