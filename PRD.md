@@ -3,6 +3,8 @@
 ## 🎯 Goal
 Evaluate two SEAL prompts in two modes: single run and batch run (5 input-output pairs). Provide qualitative scoring via LLM-as-a-Judge and binary completeness via structured output (primary) and Pydantic (fallback). Log results to CSV with per-item and batch-level metrics.
 
+**⚠️ Important Note:** Structured Output does not work well with this application. Users should keep the "Use Structured Output (Gemini)" checkbox unticked and stick to Pydantic validation instead.
+
 ---
 
 ## 🧱 Tech Stack
@@ -28,13 +30,13 @@ Evaluate two SEAL prompts in two modes: single run and batch run (5 input-output
 - Inputs: Prompt type (emt/curriculum), JSON input
 - Outputs: Generated prompt, generated answer, judge feedback
 - Scores: Relevance (1–10), Clarity (1–10), Total (1–10)
-- Completeness: Structured output (if enabled) or Pydantic validation
+- Completeness: Pydantic validation (recommended). Structured output is available but not recommended due to reliability issues.
 
 ### Batch Run (5 datasets)
 - Inputs: CSV with 5 rows (columns: `type`, `input` JSON)
 - Per-item Scores: Relevance (1–10), Clarity (1–10)
 - Batch Scores: Consistency (1–10), Creativity (1–10)
-- Completeness: Structured output (if enabled) or Pydantic validation
+- Completeness: Pydantic validation (recommended). Structured output is available but not recommended due to reliability issues.
 
 ---
 
@@ -103,5 +105,5 @@ Creativity means ..., how to score
 - README and PRD document single vs batch evaluation, criteria, and logging
 - Batch run shows per-item Relevance/Clarity and a single Consistency/Creativity metric
 - CSV contains per-item rows and one batch summary row per batch with `batch_id`
-- Structured Output toggle works; if enabled, Pydantic check can be bypassed
+- Structured Output toggle works; if enabled, Pydantic check can be bypassed (Note: Structured Output is not recommended due to reliability issues - users should stick to Pydantic validation)
 

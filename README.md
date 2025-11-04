@@ -147,7 +147,7 @@ Creativity means ..., how to score
 - Primary enforcement: Gemini Structured Output (schema-constrained JSON)
 - Fallback enforcement: Pydantic validation
 
-If structured output is enabled and returns valid JSON for the target schema, the Pydantic completeness check may be skipped.
+**⚠️ Important Note:** Structured Output does not work well with this application. **Please keep the "Use Structured Output (Gemini)" checkbox unticked** and stick to Pydantic validation instead. Pydantic provides reliable validation and is the recommended approach for this tool.
 
 ### Batch Evaluation
 
