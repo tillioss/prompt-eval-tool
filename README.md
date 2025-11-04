@@ -79,6 +79,7 @@ The app will open in your browser at `http://localhost:8501`
 2. **Configure models**:
    - Select a **Judge Model** for evaluation (with temperature control)
    - Select a **Generator Model** for answer generation (with temperature control)
+   - **Note:** If you check the "Use Structured Output (Gemini)" checkbox, a warning will appear reminding you to keep it unticked and use Pydantic validation instead
 
 3. **Select prompt type**:
    - **EMT (Emotion Matching Task)**: Generate intervention plans based on class performance scores
@@ -88,12 +89,14 @@ The app will open in your browser at `http://localhost:8501`
    - **For EMT**: Provide scores and metadata (see example format below)
    - **For Curriculum**: Provide grade level, skill areas, and score
 
-5. **Click "Generate & Evaluate"** to:
+5. **View evaluation prompts** (optional): Use the expandable sections at the top to view the evaluation prompts used for individual and batch modes
+
+6. **Click "Generate & Evaluate"** to:
    - Generate the intervention/curriculum prompt
    - Generate the answer using the selected generator model
    - Evaluate the answer using the LLM judge
 
-6. **View results**:
+7. **View results**:
    - Generated prompt (Step 2)
    - Generated answer (Step 3)
    - **Evaluation metrics**:
@@ -104,8 +107,9 @@ The app will open in your browser at `http://localhost:8501`
      - Creativity Score (1-10)
    - Pydantic validation status
    - Detailed LLM judge feedback
+   - Expandable section to view the exact judge prompt used
 
-7. **Check history** by toggling "Show Evaluation History" to view all past evaluations with summary statistics
+8. **Check history** by toggling "Show Evaluation History" to view all past evaluations with summary statistics
 
 ## SEAL Prompt Evaluation: Single vs Batch Modes
 
@@ -148,6 +152,8 @@ Creativity means ..., how to score
 - Fallback enforcement: Pydantic validation
 
 **⚠️ Important Note:** Structured Output does not work well with this application. **Please keep the "Use Structured Output (Gemini)" checkbox unticked** and stick to Pydantic validation instead. Pydantic provides reliable validation and is the recommended approach for this tool.
+
+If you check the structured output checkbox in the UI, a warning message will appear reminding you to keep it unticked.
 
 ### Batch Evaluation
 
@@ -224,6 +230,8 @@ The app supports three Gemini 2.5 models, each optimized for different use cases
 All evaluations are automatically saved to `evaluations.csv` with the following columns:
 
 - `timestamp` – When the evaluation was performed
+- `batch_id` – Identifier for batch runs (same for all rows in a batch, `None` for individual evaluations)
+- `row_type` – `item` for per-item rows, `batch_summary` for batch-level metrics
 - `model` – Which generator model was used
 - `temperature` – Temperature setting for the generator model
 - `question` – The input context/question (prompt type and input data)
@@ -234,8 +242,8 @@ All evaluations are automatically saved to `evaluations.csv` with the following 
 - `validation_status` – Pydantic validation result (Valid ✅ or Invalid ❌)
 - `relevance_score` – Relevance score from 1-10
 - `clarity_score` – Clarity score from 1-10
-- `consistency_score` – Consistency score from 1-10
-- `creativity_score` – Creativity score from 1-10
+- `consistency_score` – Consistency score from 1-10 (batch_summary rows only)
+- `creativity_score` – Creativity score from 1-10 (batch_summary rows only)
 
 ## 🏗️ Project Structure
 
