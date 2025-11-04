@@ -10,7 +10,7 @@ import os
 
 CSV_FILE = "evaluations.csv"
 CSV_HEADER = [
-    "timestamp", "model", "temperature", "question", "answer", "judge_feedback",
+    "timestamp", "batch_id", "row_type", "model", "temperature", "question", "answer", "judge_feedback",
     "judge_prompt", "total_rating(1-10)", "validation_status", "relevance_score",
     "clarity_score", "consistency_score", "creativity_score"
 ]
@@ -28,7 +28,9 @@ def log_evaluation(
     relevance_score: Optional[int],
     clarity_score: Optional[int],
     consistency_score: Optional[int],
-    creativity_score: Optional[int]
+    creativity_score: Optional[int],
+    batch_id: Optional[str] = None,
+    row_type: str = "item"
 ):
     """
     Log an evaluation to a CSV file.
@@ -52,6 +54,8 @@ def log_evaluation(
     # Create a dictionary for the new row
     new_row = {
         "timestamp": now.strftime("%Y-%m-%d %H:%M:%S"),
+        "batch_id": batch_id,
+        "row_type": row_type,
         "model": model,
         "temperature": temperature,
         "question": question,
@@ -70,15 +74,50 @@ def log_evaluation(
     csv_path = Path(CSV_FILE)
     
     if csv_path.exists() and csv_path.stat().st_size > 0:
-        # Append to existing file
+        # Append to existing file using concat to avoid FutureWarning
         df = pd.read_csv(csv_path)
-        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+        # Ensure all expected columns exist and order them
+        for col in CSV_HEADER:
+            if col not in df.columns:
+                df[col] = pd.NA
+        df = df.reindex(columns=CSV_HEADER)
+        # Build a one-row DataFrame with aligned columns
+        row_df = pd.DataFrame([{col: new_row.get(col, pd.NA) for col in CSV_HEADER}])
+        df = pd.concat([df, row_df], ignore_index=True)
     else:
         # Create new file
         df = pd.DataFrame([new_row], columns=CSV_HEADER)
     
     # Save to CSV
     df.to_csv(csv_path, index=False)
+
+
+def log_batch_summary(
+    model: str,
+    temperature: float,
+    judge_feedback: str,
+    judge_prompt: str,
+    consistency_score: Optional[int],
+    creativity_score: Optional[int],
+    batch_id: Optional[str]
+):
+    """Log a single batch summary row capturing batch-level metrics only."""
+    return log_evaluation(
+        model=model,
+        temperature=temperature,
+        question="",
+        answer="",
+        judge_feedback=judge_feedback,
+        judge_prompt=judge_prompt,
+        total_rating=None,
+        validation_status="",
+        relevance_score=None,
+        clarity_score=None,
+        consistency_score=consistency_score,
+        creativity_score=creativity_score,
+        batch_id=batch_id,
+        row_type="batch_summary"
+    )
 
 
 def get_evaluation_history() -> pd.DataFrame:

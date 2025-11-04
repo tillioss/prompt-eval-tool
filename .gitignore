@@ -14,6 +14,20 @@ __pycache__/
 
 # CSV outputs
 evaluations.csv
+batch_evaluation_results.csv
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+*.cover
+.hypothesis/
+
+# Streamlit
+.streamlit/
 
 # IDE
 .vscode/
@@ -24,4 +38,9 @@ evaluations.csv
 # OS
 .DS_Store
 Thumbs.db
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
