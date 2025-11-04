@@ -14,14 +14,20 @@ __pycache__/
 
 # CSV outputs
 evaluations.csv
+batch_evaluation_results.csv
 
 # Testing
 .pytest_cache/
 .coverage
+.coverage.*
+coverage.xml
 htmlcov/
 .tox/
 *.cover
 .hypothesis/
+
+# Streamlit
+.streamlit/
 
 # IDE
 .vscode/
