@@ -18,13 +18,13 @@ from judge import (
     EVALUATION_PROMPT_INDIVIDUAL,
     EVALUATION_PROMPT_BATCH_GUIDE,
     evaluate_batch_with_gemini,
-    flatten_json_schema
+    # flatten_json_schema  # Structured Output disabled
 )
 from logger import log_evaluation, get_evaluation_history, log_batch_summary
 from intervention import InterventionPrompt
 from curriculum import CurriculumPrompt
-from schemas.base import InterventionPlan
-from schemas.curriculum import CurriculumResponse
+# from schemas.base import InterventionPlan  # Structured Output disabled
+# from schemas.curriculum import CurriculumResponse  # Structured Output disabled
 
 
 # Load environment variables
@@ -127,14 +127,16 @@ with st.sidebar:
         help="Controls the randomness of the generator's output. Higher is more creative."
     )
 
-    use_structured_output = st.checkbox(
-        "Use Structured Output (Gemini)",
-        value=False,
-        help="If enabled, generator output will be constrained to the target schema and treated as complete."
-    )
+    # Disable Structured Output usage entirely
+    # use_structured_output = st.checkbox(
+    #     "Use Structured Output (Gemini)",
+    #     value=False,
+    #     help="If enabled, generator output will be constrained to the target schema and treated as complete."
+    # )
+    use_structured_output = False
     
-    if use_structured_output:
-        st.warning("⚠️ **Note:** Structured Output does not work well with this application. Please keep this checkbox **unticked** and stick to Pydantic validation instead.")
+    # if use_structured_output:
+    #     st.warning("⚠️ **Note:** Structured Output does not work well with this application. Please keep this checkbox **unticked** and stick to Pydantic validation instead.")
     
     # Show history toggle
     show_history = st.checkbox("Show Evaluation History", value=False)
@@ -227,14 +229,9 @@ with individual_tab:
                 with generated_prompt_placeholder.container():
                     st.code(prompt, language='markdown')
 
-                # Step 2: Generate answer with LLM
+                # Step 2: Generate answer with LLM (Structured Output disabled)
                 with st.spinner("Generating answer..."):
                     response_schema = None
-                    if use_structured_output and generator_provider == 'gemini':
-                        if prompt_type == 'emt':
-                            response_schema = flatten_json_schema(InterventionPlan.model_json_schema())
-                        elif prompt_type == 'curriculum':
-                            response_schema = flatten_json_schema(CurriculumResponse.model_json_schema())
                     answer = generate_with_llm(
                         prompt,
                         generator_provider,
@@ -245,22 +242,14 @@ with individual_tab:
                 
                 with answer_placeholder.container():
                     st.markdown(answer)
-                    # Completeness validation displayed with the generated answer
-                    if use_structured_output and generator_provider == 'gemini':
-                        if isinstance(answer, str) and answer.startswith("Error"):
-                            validation_status = "Invalid ❌ (Structured Output generation error)"
-                            st.error("Completeness: " + validation_status)
-                        else:
-                            validation_status = "Valid ✅ (Structured Output)"
-                            st.success("Completeness: " + validation_status)
-                    else:
-                        try:
-                            ModelAnswer(content=answer)
-                            validation_status = "Valid ✅"
-                            st.success("Completeness: " + validation_status)
-                        except ValidationError as e:
-                            validation_status = f"Invalid ❌\n{str(e)}"
-                            st.error("Completeness: " + validation_status)
+                    # Completeness validation always via Pydantic
+                    try:
+                        ModelAnswer(content=answer)
+                        validation_status = "Valid ✅"
+                        st.success("Completeness: " + validation_status)
+                    except ValidationError as e:
+                        validation_status = f"Invalid ❌\n{str(e)}"
+                        st.error("Completeness: " + validation_status)
 
                 # Step 3: Evaluate the generated answer
                 with st.spinner("Evaluating answer..."):
@@ -361,13 +350,8 @@ with batch_tab:
                                 elif prompt_type == 'curriculum':
                                     prompt = CurriculumPrompt.get_prompt(generator_provider, input_data)
                                 
-                                # Step 2: Generate answer
+                                # Step 2: Generate answer (Structured Output disabled)
                                 response_schema = None
-                                if use_structured_output and generator_provider == 'gemini':
-                                    if prompt_type == 'emt':
-                                        response_schema = flatten_json_schema(InterventionPlan.model_json_schema())
-                                    elif prompt_type == 'curriculum':
-                                        response_schema = flatten_json_schema(CurriculumResponse.model_json_schema())
                                 answer = generate_with_llm(
                                     prompt,
                                     generator_provider,
@@ -387,15 +371,12 @@ with batch_tab:
                                     mode="individual"
                                 )
 
-                                # Step 4: Completeness validation
-                                if use_structured_output and generator_provider == 'gemini':
-                                    validation_status = "Valid (Structured Output)"
-                                else:
-                                    try:
-                                        ModelAnswer(content=answer)
-                                        validation_status = "Valid"
-                                    except ValidationError as e:
-                                        validation_status = f"Invalid: {e}"
+                                # Step 4: Completeness validation always via Pydantic
+                                try:
+                                    ModelAnswer(content=answer)
+                                    validation_status = "Valid"
+                                except ValidationError as e:
+                                    validation_status = f"Invalid: {e}"
                                 
                                 result_row = {
                                     "type": prompt_type,
@@ -459,6 +440,12 @@ with batch_tab:
                         cols = st.columns(2)
                         cols[0].metric("Consistency (1-10)", batch_scores.get("consistency", "N/A"))
                         cols[1].metric("Creativity (1-10)", batch_scores.get("creativity", "N/A"))
+
+                        with st.expander("Show Batch Feedback"):
+                            st.markdown(batch_feedback)
+
+                        with st.expander("Show Batch Judge Prompt"):
+                            st.code(batch_prompt, language='markdown')
                         # Log batch summary row
                         log_batch_summary(
                             model=generator_model,

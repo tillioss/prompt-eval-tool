@@ -74,14 +74,16 @@ def log_evaluation(
     csv_path = Path(CSV_FILE)
     
     if csv_path.exists() and csv_path.stat().st_size > 0:
-        # Append to existing file without concat to avoid FutureWarning
+        # Append to existing file using concat to avoid FutureWarning
         df = pd.read_csv(csv_path)
-        # Ensure all expected columns exist
+        # Ensure all expected columns exist and order them
         for col in CSV_HEADER:
             if col not in df.columns:
                 df[col] = pd.NA
-        # Append row via index assignment
-        df.loc[len(df)] = [new_row.get(col, pd.NA) for col in CSV_HEADER]
+        df = df.reindex(columns=CSV_HEADER)
+        # Build a one-row DataFrame with aligned columns
+        row_df = pd.DataFrame([{col: new_row.get(col, pd.NA) for col in CSV_HEADER}])
+        df = pd.concat([df, row_df], ignore_index=True)
     else:
         # Create new file
         df = pd.DataFrame([new_row], columns=CSV_HEADER)

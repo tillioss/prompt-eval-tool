@@ -15,6 +15,14 @@ __pycache__/
 # CSV outputs
 evaluations.csv
 
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+*.cover
+.hypothesis/
+
 # IDE
 .vscode/
 .idea/
@@ -24,4 +32,9 @@ evaluations.csv
 # OS
 .DS_Store
 Thumbs.db
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
 
